@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput } from 'react-native';
 import Animated, { Easing } from 'react-native-reanimated';
 import { TapGestureHandler, State } from 'react-native-gesture-handler';
+import Svg, {Image, Circle, ClipPath} from "react-native-svg";
 import img from '../assets/bg3.jpg'
 
 const { width, height } = Dimensions.get('window');
@@ -20,7 +21,8 @@ const {
     timing,
     clockRunning,
     interpolate,
-    Extrapolate
+    Extrapolate,
+    concat
 } = Animated;
 
 function runTiming(clock, value, dest) {
@@ -53,8 +55,8 @@ function runTiming(clock, value, dest) {
 }
 
 class SignIn extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
 
         this.buttonOpacity = new Value(1);
 
@@ -70,6 +72,18 @@ class SignIn extends Component {
             }
         ]);
 
+        this.onCloseButton = event([
+            {
+                nativeEvent: ({ state }) =>
+                    block([
+                        cond(
+                            eq(state, State.END),
+                            set(this.buttonOpacity, runTiming(new Clock(), 0, 1))
+                        )
+                    ])
+            }
+        ]);
+
         this.buttonY = interpolate(this.buttonOpacity, {
             inputRange: [0, 1],
             outputRange: [100, 0],
@@ -78,7 +92,29 @@ class SignIn extends Component {
 
         this.bgY = interpolate(this.buttonOpacity, {
             inputRange: [0, 1],
-            outputRange: [-height / 3, 0],
+            outputRange: [-height / 3-50, 0],
+            extrapolate: Extrapolate.CLAMP
+        });
+
+        this.textInputZIndex = interpolate(this.buttonOpacity, {
+            inputRange: [0, 1],
+            outputRange: [1,-1],
+            extrapolate: Extrapolate.CLAMP
+        });
+        this.textInputY = interpolate(this.buttonOpacity, {
+            inputRange: [0, 1],
+            outputRange: [0,100],
+            extrapolate: Extrapolate.CLAMP
+        });
+        this.textInputOpacity = interpolate(this.buttonOpacity, {
+            inputRange: [0, 1],
+            outputRange: [1,0],
+            extrapolate: Extrapolate.CLAMP
+        });
+
+        this.rotateCross = interpolate(this.buttonOpacity, {
+            inputRange: [0, 1],
+            outputRange: [180,360],
             extrapolate: Extrapolate.CLAMP
         });
     }
@@ -98,10 +134,18 @@ class SignIn extends Component {
                         transform: [{ translateY: this.bgY }]
                     }}
                 >
-                    <Image
-                        source={img}
-                        style={{ flex: 1, height: null, width: null }}
-                    />
+                    <Svg height={height+50} width={width}>
+                        <ClipPath id='clip'>
+                            <Circle r={height+50} cx={width/2}/>
+                        </ClipPath>
+                        <Image
+                            href={img}
+                            height={height+50}
+                            width={width}
+                            preserveAspectRatio='xMidYMid slice'
+                            clipPath='url(#clip)'
+                        />
+                    </Svg>
                 </Animated.View>
                 <View style={{ height: height / 3, justifyContent: 'center' }}>
                     <TapGestureHandler onHandlerStateChange={this.onStateChange}>
@@ -127,6 +171,46 @@ class SignIn extends Component {
                             SIGN IN WITH FACEBOOK
                         </Text>
                     </Animated.View>
+                    <Animated.View
+                        style={{
+                            ...StyleSheet.absoluteFill,
+                            height: height/3,
+                            top: null,
+                            justifyContent: 'center',
+                            zIndex: this.textInputZIndex,
+                            opacity: this.textInputOpacity,
+                            transform: [{translateY: this.textInputY}]
+                        }}
+                    >
+                        <TapGestureHandler onHandlerStateChange={this.onCloseButton}>
+                            <Animated.View style={styles.closeButton}>
+                                <Animated.Text
+                                    style={{
+                                        fontSize:15,
+                                        transform: [{ rotate: concat(this.rotateCross,'deg') }]
+                                    }}
+                                >
+                                    X
+                                </Animated.Text>
+                            </Animated.View>
+                        </TapGestureHandler>
+
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder='EMAIL'
+                            placeholderTextColor='black'
+                        />
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder='PASSWORD'
+                            placeholderTextColor='black'
+                        />
+                        <Animated.View style={styles.button}>
+                            <Text style={{fontSize: 20, fontWeight: 'bold'}}>
+                                SIGN IN
+                            </Text>
+                        </Animated.View>
+                    </Animated.View>
                 </View>
             </View>
         );
@@ -148,6 +232,42 @@ const styles = StyleSheet.create({
         borderRadius: 35,
         alignItems: 'center',
         justifyContent: 'center',
+        marginVertical: 5,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 2,
+            height: 2,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 4.65,
+        elevation: 6
+    },
+    textInput: {
+        height: 50,
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.2)',
+        paddingLeft: 10,
+        marginHorizontal: 20,
         marginVertical: 5
+    },
+    closeButton: {
+        height: 40,
+        width: 40,
+        position: 'absolute',
+        top: -20,
+        left: width/2-20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 2,
+            height: 2,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 4.65,
+        elevation: 6
     }
 });
